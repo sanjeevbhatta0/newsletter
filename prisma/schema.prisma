@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatar        String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspaces    WorkspaceMember[]
+  sessions      Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+
+  // Beehiiv Integration
+  beehiivApiKey     String?
+  beehiivPublicationId String?
+  beehiivConnected  Boolean   @default(false)
+
+  // Branding
+  logo          String?
+  primaryColor  String    @default("#6366F1")
+
+  // Stats cache
+  totalSubscribers  Int     @default(0)
+  activeSubscribers Int     @default(0)
+  totalRevenue      Float   @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  members       WorkspaceMember[]
+  templates     Template[]
+  campaigns     Campaign[]
+  subscribers   Subscriber[]
+  automations   Automation[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  role        String    @default("MEMBER")
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, workspaceId])
+}
+
+model Subscriber {
+  id              String    @id @default(cuid())
+  email           String
+  firstName       String?
+  lastName        String?
+  status          String    @default("active")
+
+  // Beehiiv sync
+  beehiivId       String?
+
+  // Engagement
+  engagementScore Int       @default(50)
+  openRate        Float     @default(0)
+  clickRate       Float     @default(0)
+
+  // Tags
+  tags            String?
+
+  // Custom fields
+  customFields    String?
+
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  subscribedAt    DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([email, workspaceId])
+}
+
+model Template {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  content     String
+  thumbnail   String?
+  category    String    @default("newsletter")
+  isPublic    Boolean   @default(false)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  name        String
+  subject     String?
+  preheader   String?
+  content     String?
+  status      String    @default("draft")
+
+  // Beehiiv sync
+  beehiivPostId String?
+
+  // Analytics
+  sentCount     Int       @default(0)
+  openCount     Int       @default(0)
+  clickCount    Int       @default(0)
+
+  // Scheduling
+  scheduledAt   DateTime?
+  sentAt        DateTime?
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Automation {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  trigger     String
+  actions     String
+  isActive    Boolean   @default(false)
+
+  // Beehiiv sync
+  beehiivAutomationId String?
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  metadata    String?
+
+  userId      String
+  workspaceId String
+
+  createdAt   DateTime  @default(now())
+}
